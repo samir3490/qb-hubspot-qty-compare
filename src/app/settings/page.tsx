@@ -126,9 +126,13 @@ export default function SettingsPage() {
               type="password"
               value={config.quickbase.userToken}
               onChange={(e) => updateQb('userToken', e.target.value)}
-              placeholder="QB-USER-TOKEN"
+              placeholder="Paste token only (prefix added automatically)"
               autoComplete="off"
             />
+            <p className="hint">
+              Paste the token value only, or the full{' '}
+              <code>QB-USER-TOKEN …</code> string from QuickBase.
+            </p>
             {config.quickbase.userToken && (
               <p className="hint">Saved: {maskToken(config.quickbase.userToken)}</p>
             )}

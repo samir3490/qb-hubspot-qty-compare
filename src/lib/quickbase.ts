@@ -42,15 +42,25 @@ function normalizeRealmHostname(raw: string): string {
   return host;
 }
 
-export function quickbaseHeaders(
-  config: ConnectionConfig['quickbase']
-): Record<string, string> {
-  const token = config.userToken.trim();
+function formatQuickbaseAuthorization(rawToken: string): string {
+  const token = rawToken.trim();
   if (!token) {
     throw new Error('QuickBase user token is required.');
   }
+  if (/^QB-USER-TOKEN\s+/i.test(token)) {
+    return token;
+  }
+  if (/^QB-TEMP-TOKEN\s+/i.test(token)) {
+    return token;
+  }
+  return `QB-USER-TOKEN ${token}`;
+}
+
+export function quickbaseHeaders(
+  config: ConnectionConfig['quickbase']
+): Record<string, string> {
   return {
-    'QB-USER-TOKEN': token,
+    Authorization: formatQuickbaseAuthorization(config.userToken),
     'QB-Realm-Hostname': normalizeRealmHostname(config.realmHostname),
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -94,9 +104,12 @@ export async function fetchQuickbaseItems(
     if (!res.ok) {
       const text = await res.text();
       let hint = '';
-      if (res.status === 403) {
+      if (res.status === 403 || res.status === 401) {
         hint =
-          ' Check: (1) QB-Realm-Hostname matches your realm (e.g. isee.quickbase.com), (2) user token is valid and not expired, (3) token has access to the Items table/app.';
+          ' Check: realm hostname (e.g. isee.quickbase.com), valid user token, and access to the Items table.';
+      }
+      if (res.status === 400 && text.includes('authorization')) {
+        hint = ' Authorization header must be QB-USER-TOKEN followed by your token.';
       }
       throw new Error(`QuickBase API error (${res.status}): ${text}${hint}`);
     }
