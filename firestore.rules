@@ -1,9 +1,222 @@
 rules_version = '2';
+
+// Shared Firestore rules for Firebase project: agrasen-technologies
+// Apps: donor-transparency, algo-trader, qb-hubspot-qty-compare
+//
+// Deploy (once per rules change):
+//   firebase use agrasen-technologies
+//   firebase deploy --only firestore:rules
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Per-user settings + compare history (subcollections included)
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function authEmail() {
+      return request.auth.token.email;
+    }
+
+    function securitySettings() {
+      return get(/databases/$(database)/documents/settings/security);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        authEmail() == 'admin@agrawalfoundation.org' ||
+        (exists(/databases/$(database)/documents/settings/security) &&
+          authEmail() in securitySettings().data.adminEmails)
+      );
+    }
+
+    function roleDocPath() {
+      return /databases/$(database)/documents/roles_by_email/$(authEmail());
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() &&
+        exists(roleDocPath()) &&
+        get(roleDocPath()).data.role == role;
+    }
+
+    function roleEntityId() {
+      return get(roleDocPath()).data.entityId;
+    }
+
+    function entityCollection(role) {
+      return role == 'volunteer' ? 'volunteers'
+        : role == 'ngo' ? 'ngos'
+        : role + 's';
+    }
+
+    function entityEmailMatches(role, entityId, email) {
+      return get(/databases/$(database)/documents/$(entityCollection(role))/$(entityId)).data.email == email;
+    }
+
+    function canSyncOwnRole(email) {
+      return isAuthenticated()
+        && authEmail() == email
+        && !exists(/databases/$(database)/documents/roles_by_email/$(email))
+        && request.resource.data.keys().hasOnly(['role', 'entityId', 'updatedAt'])
+        && request.resource.data.role in ['student', 'trainer', 'donor', 'ngo', 'volunteer']
+        && entityEmailMatches(
+          request.resource.data.role,
+          request.resource.data.entityId,
+          email
+        );
+    }
+
+    function isStudentOwner(studentId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/students/$(studentId)).data.email == authEmail();
+    }
+
+    function isTrainer() {
+      return hasRole('trainer');
+    }
+
+    function isVolunteerOwner(volunteerId) {
+      return hasRole('volunteer') && roleEntityId() == volunteerId;
+    }
+
+    function volunteerEmailMatches(volunteerId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/volunteers/$(volunteerId)).data.email == authEmail();
+    }
+
+    function canActAsVolunteer(volunteerId) {
+      return isVolunteerOwner(volunteerId) || volunteerEmailMatches(volunteerId);
+    }
+
+    function onlyHoursLoggedChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hoursLogged']);
+    }
+
+    function onlyAgreementAcceptanceChanged() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasAll(['volunteerAgreement']) &&
+        (changed.hasOnly(['volunteerAgreement']) ||
+          (changed.hasOnly(['volunteerAgreement', 'email']) &&
+            request.resource.data.email == authEmail())) &&
+        request.resource.data.volunteerAgreement.keys().hasAll([
+          'version', 'acceptedAt', 'acceptedByEmail', 'acceptedByName'
+        ]) &&
+        (!('volunteerAgreement' in resource.data) || resource.data.volunteerAgreement == null);
+    }
+
+    function volunteerSelfUpdateOk(volunteerId) {
+      return canActAsVolunteer(volunteerId) &&
+        (onlyHoursLoggedChanged() || onlyAgreementAcceptanceChanged());
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── AlgoTrader (holdings, trades, strategies, orders, Zerodha accounts) ──
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── QB ↔ HubSpot quantity compare ──
     match /qtyCompareUsers/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Donor transparency app ──
+    match /settings/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /roles_by_email/{email} {
+      allow read: if isAuthenticated() && (authEmail() == email || isAdmin());
+      allow create: if isAdmin() || canSyncOwnRole(email);
+      allow update, delete: if isAdmin();
+    }
+
+    match /centers/{centerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /programs/{programId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /trainers/{trainerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /donors/{donorId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        hasRole('donor') &&
+        roleEntityId() == donorId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['assignedCenters'])
+      );
+    }
+
+    match /ngos/{ngoId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        hasRole('ngo') &&
+        roleEntityId() == ngoId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['assignedCenters'])
+      );
+    }
+
+    match /students/{studentId} {
+      function studentSelfUpdateOk() {
+        return isStudentOwner(studentId) &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['enrollments', 'centerId', 'registrationNumber', 'feePayments']);
+      }
+
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTrainer();
+      allow update: if isAdmin() || isTrainer() || studentSelfUpdateOk();
+      allow delete: if isAdmin();
+    }
+
+    match /tests/{testId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTrainer();
+      allow update, delete: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() || isTrainer();
+      allow delete: if isAdmin();
+    }
+
+    match /updates/{updateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isTrainer();
+      allow update: if isAdmin() || isTrainer() || (
+        hasRole('donor') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /volunteers/{volunteerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || volunteerSelfUpdateOk(volunteerId);
+      allow delete: if isAdmin();
+    }
+
+    match /pending_users/{userId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasOnly(['email', 'date'])
+        && request.resource.data.email == authEmail();
+      allow read, delete: if isAdmin();
     }
   }
 }

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCompare, getConfigFromEnv } from '@/lib/compare';
+import { sendMismatchAlert } from '@/lib/email/alert';
 import type { ConnectionConfig } from '@/lib/types';
 
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { config?: ConnectionConfig };
+    const body = (await request.json()) as {
+      config?: ConnectionConfig;
+      sendEmail?: boolean;
+    };
     const config = body.config ?? getConfigFromEnv();
+    const sendEmail = body.sendEmail !== false;
 
     if (!config) {
       return NextResponse.json(
@@ -34,7 +39,21 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await runCompare(config);
-    return NextResponse.json(result);
+
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (sendEmail && result.summary.mismatches > 0) {
+      try {
+        const emailResult = await sendMismatchAlert(result);
+        emailSent = emailResult.sent;
+      } catch (e) {
+        emailError =
+          e instanceof Error ? e.message : 'Failed to send mismatch email';
+      }
+    }
+
+    return NextResponse.json({ ...result, emailSent, emailError });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: message }, { status: 500 });

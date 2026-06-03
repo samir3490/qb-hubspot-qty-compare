@@ -24,7 +24,7 @@ function ComparePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [filter, setFilter] = useState<Filter>('mismatch');
+  const [emailNotice, setEmailNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const runId = searchParams.get('run');
@@ -59,6 +59,7 @@ function ComparePage() {
 
     setLoading(true);
     setError(null);
+    setEmailNotice(null);
     setResult(null);
 
     try {
@@ -69,9 +70,21 @@ function ComparePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Compare failed');
-      const compareResult = data as CompareResult;
+      const compareResult = data as CompareResult & {
+        emailSent?: boolean;
+        emailError?: string | null;
+      };
       setResult(compareResult);
       setFilter('mismatch');
+      if (compareResult.summary.mismatches > 0) {
+        if (compareResult.emailSent) {
+          setEmailNotice(
+            `Alert email sent (${compareResult.summary.mismatches} mismatches). Check samir3490@gmail.com (and spam).`
+          );
+        } else if (compareResult.emailError) {
+          setEmailNotice(`Email not sent: ${compareResult.emailError}`);
+        }
+      }
       if (user) {
         await saveCompareRunToFirestore(user.uid, compareResult);
       }
@@ -158,6 +171,14 @@ function ComparePage() {
           History
         </Link>
       </div>
+
+      {emailNotice && (
+        <div
+          className={`alert ${emailNotice.startsWith('Email not sent') ? 'alert-error' : 'alert-success'}`}
+        >
+          {emailNotice}
+        </div>
+      )}
 
       {error && <div className="alert alert-error">{error}</div>}
 
@@ -263,8 +284,8 @@ function ComparePage() {
       {!result && !loading && !error && (
         <div className="alert alert-info">
           Save connections in <Link href="/settings">Settings</Link> (stored in
-          Firebase), then run a compare. Typical usage: ~1–5 QuickBase calls + ~4
-          HubSpot calls for ~300 products.
+          Firebase), then run a compare. If mismatches are found, an alert email
+          is sent automatically.
         </div>
       )}
     </main>
