@@ -26,6 +26,8 @@ function ComparePage() {
   const [exporting, setExporting] = useState(false);
   const [filter, setFilter] = useState<Filter>('mismatch');
   const [emailNotice, setEmailNotice] = useState<string | null>(null);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const runId = searchParams.get('run');
@@ -61,6 +63,7 @@ function ComparePage() {
     setLoading(true);
     setError(null);
     setEmailNotice(null);
+    setSyncNotice(null);
     setResult(null);
 
     try {
@@ -93,6 +96,57 @@ function ComparePage() {
       setError(e instanceof Error ? e.message : 'Compare failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function syncHubspotFromQuickbase() {
+    if (!result || result.summary.mismatches === 0) return;
+
+    const activeConfig = user ? await refreshConfig() : config;
+    const mismatches = result.rows.filter((r) => r.status === 'mismatch');
+    const count = mismatches.filter(
+      (r) => r.qbQty !== null && Number.isFinite(r.qbQty)
+    ).length;
+
+    if (count === 0) {
+      setSyncNotice('No mismatches with a QuickBase quantity to sync.');
+      return;
+    }
+
+    const ok = window.confirm(
+      `Update HubSpot quantity for ${count} product(s) using QuickBase as source of truth? This writes to HubSpot (crm.objects.products.write scope required).`
+    );
+    if (!ok) return;
+
+    setSyncing(true);
+    setSyncNotice(null);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/sync/hubspot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: activeConfig,
+          mismatches,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed');
+
+      if (data.failed?.length) {
+        setSyncNotice(
+          `Updated ${data.updated} product(s). ${data.failed.length} failed — check HubSpot write scope and SKUs.`
+        );
+      } else {
+        setSyncNotice(
+          `HubSpot updated: ${data.updated} product(s) set to QuickBase quantities.`
+        );
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'HubSpot sync failed');
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -155,6 +209,16 @@ function ComparePage() {
         >
           {loading ? 'Running compare…' : 'Run compare now'}
         </button>
+        {result && result.summary.mismatches > 0 && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={syncHubspotFromQuickbase}
+            disabled={syncing || loading}
+          >
+            {syncing ? 'Updating HubSpot…' : 'Update HubSpot from QuickBase'}
+          </button>
+        )}
         {result && (
           <button
             type="button"
@@ -172,6 +236,14 @@ function ComparePage() {
           History
         </Link>
       </div>
+
+      {syncNotice && (
+        <div
+          className={`alert ${syncNotice.includes('failed') ? 'alert-error' : 'alert-success'}`}
+        >
+          {syncNotice}
+        </div>
+      )}
 
       {emailNotice && (
         <div

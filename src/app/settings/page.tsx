@@ -6,6 +6,7 @@ import type { ConnectionConfig } from '@/lib/types';
 import { EXCLUDED_PRODUCT_FAMILIES } from '@/lib/types';
 import {
   HUBSPOT_REQUIRED_SCOPES,
+  HUBSPOT_SYNC_SCOPES,
   HUBSPOT_OPTIONAL_SCOPES,
 } from '@/lib/hubspot-scopes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,6 +66,17 @@ export default function SettingsPage() {
     setConfig((c) => ({
       ...c,
       hubspot: { ...c.hubspot, [key]: value },
+    }));
+    setSaveStatus('idle');
+  }
+
+  function updatePref<K extends keyof NonNullable<ConnectionConfig['preferences']>>(
+    key: K,
+    value: NonNullable<ConnectionConfig['preferences']>[K]
+  ) {
+    setConfig((c) => ({
+      ...c,
+      preferences: { ...DEFAULT_CONFIG.preferences, ...c.preferences, [key]: value },
     }));
     setSaveStatus('idle');
   }
@@ -374,10 +386,40 @@ export default function SettingsPage() {
             </li>
           ))}
         </ul>
+        <div className="section-title">For HubSpot quantity sync</div>
+        <ul style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+          {HUBSPOT_SYNC_SCOPES.map((s) => (
+            <li key={s.scope}>
+              <code>{s.scope}</code> — {s.why}
+            </li>
+          ))}
+        </ul>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
           Optional:{' '}
           {HUBSPOT_OPTIONAL_SCOPES.map((s) => s.scope).join(', ')} if not
           using standard Products object.
+        </p>
+      </div>
+
+      <div className="card">
+        <h2>Sync preferences</h2>
+        <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+          QuickBase is always the source of truth. Use manual sync on the compare
+          page, or enable automatic sync after the daily job finds mismatches.
+        </p>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={config.preferences?.autoSyncHubSpotOnDaily === true}
+            onChange={(e) =>
+              updatePref('autoSyncHubSpotOnDaily', e.target.checked)
+            }
+          />
+          Auto-update HubSpot quantities on daily compare (when mismatches exist)
+        </label>
+        <p className="hint">
+          Daily job runs at 6:00 AM US Central (12:00 UTC). Requires{' '}
+          <code>crm.objects.products.write</code> on your HubSpot Private App.
         </p>
       </div>
 

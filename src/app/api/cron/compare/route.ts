@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runCompare } from '@/lib/compare';
 import { getCronConfig } from '@/lib/cron-config';
 import { sendMismatchAlert } from '@/lib/email/alert';
+import { syncHubspotQuantitiesFromQuickbase } from '@/lib/hubspot-sync';
 import {
   saveCompareRunAdmin,
   isAdminConfigured,
@@ -49,7 +50,26 @@ export async function GET(request: NextRequest) {
     }
 
     let emailResult = { sent: false, mismatchCount: 0 };
+    let syncResult: Awaited<
+      ReturnType<typeof syncHubspotQuantitiesFromQuickbase>
+    > | null = null;
+
+    const autoSync =
+      config.preferences?.autoSyncHubSpotOnDaily === true ||
+      process.env.CRON_AUTO_SYNC_HUBSPOT === 'true';
+
     if (result.summary.mismatches > 0) {
+      const mismatches = result.rows.filter((r) => r.status === 'mismatch');
+
+      if (autoSync) {
+        syncResult = await syncHubspotQuantitiesFromQuickbase(
+          config.hubspot,
+          mismatches
+            .filter((r) => r.qbQty !== null && Number.isFinite(r.qbQty))
+            .map((r) => ({ sku: r.sku, qbQty: r.qbQty as number }))
+        );
+      }
+
       emailResult = await sendMismatchAlert(result);
     }
 
@@ -59,6 +79,8 @@ export async function GET(request: NextRequest) {
       mismatchCount: result.summary.mismatches,
       emailSent: emailResult.sent,
       alertEmail: emailResult.sent ? process.env.ALERT_EMAIL : undefined,
+      hubspotSync: syncResult,
+      autoSyncEnabled: autoSync,
     });
   } catch (e) {
     console.error('Cron compare failed', e);

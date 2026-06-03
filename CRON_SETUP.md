@@ -1,7 +1,10 @@
 # Daily cron + email alerts
 
-Automated job: **every day at 06:00 UTC** (11:30 AM IST).  
-Emails **samir3490@gmail.com** only when **quantity mismatches** exist.
+Automated job: **every day at 6:00 AM US Central** (`0 12 * * *` UTC).  
+During daylight saving (CDT), that is **7:00 AM** local Central time.  
+Emails **samir3490@gmail.com** when **quantity mismatches** exist.
+
+Optional: enable **Auto-update HubSpot quantities on daily compare** in Settings (or set `CRON_AUTO_SYNC_HUBSPOT=true` on Vercel) to push QuickBase qty to HubSpot after mismatches are found. Requires HubSpot scope `crm.objects.products.write`.
 
 ## 1. Vercel env vars (required)
 
@@ -63,3 +66,4 @@ Cron jobs require **Vercel Pro** (or equivalent) on the project. Confirm under *
 - **No email** if all quantities match
 - Email includes top 50 mismatches + link to the app
 - Saves run to Firestore under your user (History tab)
+- If auto-sync is enabled, updates HubSpot `qty_available` (or your configured qty property) from QuickBase for mismatch rows

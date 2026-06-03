@@ -30,6 +30,11 @@ export interface ConnectionConfig {
     productFamilyProperty: string;
     nameProperty: string;
   };
+  /** App behavior preferences (stored with connection config) */
+  preferences?: {
+    /** Daily cron: after compare, push QB qty to HubSpot for mismatches */
+    autoSyncHubSpotOnDaily?: boolean;
+  };
 }
 
 export type CompareStatus =

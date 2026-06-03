@@ -22,6 +22,9 @@ export const DEFAULT_CONFIG: ConnectionConfig = {
     productFamilyProperty: 'product_family',
     nameProperty: 'name',
   },
+  preferences: {
+    autoSyncHubSpotOnDaily: false,
+  },
 };
 
 /** @deprecated Use Firebase via useAuth(). Settings are stored in Firestore. */

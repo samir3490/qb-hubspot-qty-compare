@@ -10,6 +10,19 @@ export const HUBSPOT_REQUIRED_SCOPES = [
   },
 ] as const;
 
+/** Additional scopes to update HubSpot quantities from QuickBase */
+export const HUBSPOT_SYNC_SCOPES = [
+  {
+    scope: 'crm.objects.products.write',
+    why: 'Update product quantity (batch upsert by SKU)',
+  },
+] as const;
+
+export const HUBSPOT_ALL_SCOPES = [
+  ...HUBSPOT_REQUIRED_SCOPES,
+  ...HUBSPOT_SYNC_SCOPES,
+];
+
 export const HUBSPOT_OPTIONAL_SCOPES = [
   {
     scope: 'crm.objects.custom.read',

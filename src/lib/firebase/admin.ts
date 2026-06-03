@@ -48,6 +48,10 @@ export async function loadConfigFromAdmin(
     ...data.config,
     quickbase: { ...DEFAULT_CONFIG.quickbase, ...data.config.quickbase },
     hubspot: { ...DEFAULT_CONFIG.hubspot, ...data.config.hubspot },
+    preferences: {
+      ...DEFAULT_CONFIG.preferences,
+      ...data.config.preferences,
+    },
   };
 }
 

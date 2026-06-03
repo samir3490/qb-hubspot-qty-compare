@@ -10,7 +10,8 @@ Compare product quantities between **QuickBase** (source of truth) and **HubSpot
 - Match on **SKU**, flag mismatches, QB-only, HubSpot-only
 - Excludes Product Families: PumpLoc, Home&Foundry, Literature, Popfin, Cooler, Signage, Samples, Edge, DO NOT USE
 - **Excel export** (Summary, Mismatches, QB Only, HubSpot Only, Matches)
-- Optional **Vercel Cron** daily compare via environment variables
+- **HubSpot sync** — update HubSpot quantities from QuickBase (manual button or optional daily auto-sync)
+- Optional **Vercel Cron** daily compare at **6:00 AM US Central** (12:00 UTC)
 
 ## Quick start (local)
 
@@ -60,7 +61,7 @@ gh repo create qb-hubspot-qty-compare --public --source=. --push
 
 ### 3. Cron (optional)
 
-`vercel.json` runs `/api/cron/compare` daily at **11:00 UTC**. Set on Vercel:
+`vercel.json` runs `/api/cron/compare` daily at **6:00 AM US Central** (`0 12 * * *` UTC). Set on Vercel:
 
 - `CRON_SECRET` — random string
 - All `QB_*` and `HUBSPOT_*` / `HS_PROP_*` variables
@@ -81,13 +82,14 @@ Rules in `firestore.rules` restrict access to `request.auth.uid == userId`.
 - **Do not commit** `.env.local` or API tokens.
 - QuickBase / HubSpot tokens are stored in **Firestore** (encrypted at rest by Google); protect with strong auth passwords.
 - Deploy `firestore.rules` before production use.
-- HubSpot Private App: `crm.objects.products.read` for compare-only.
+- HubSpot Private App: `crm.objects.products.read` + `crm.schemas.products.read` for compare; add `crm.objects.products.write` for sync.
 
 ## API routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/api/compare` | POST | Run full compare |
+| `/api/sync/hubspot` | POST | Update HubSpot qty from QuickBase (mismatch rows) |
 | `/api/test/quickbase` | POST | Test QB connection |
 | `/api/test/hubspot` | POST | Test HubSpot connection |
 | `/api/export` | POST | Excel download |
