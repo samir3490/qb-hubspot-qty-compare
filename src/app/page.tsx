@@ -24,6 +24,7 @@ function ComparePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [filter, setFilter] = useState<Filter>('mismatch');
   const [emailNotice, setEmailNotice] = useState<string | null>(null);
 
   useEffect(() => {
