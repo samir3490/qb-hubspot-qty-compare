@@ -1,17 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // QB ↔ HubSpot quantity compare app — per-user data only
-    match /qtyCompareUsers/{userId} {
+    // Per-user settings + compare history (subcollections included)
+    match /qtyCompareUsers/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-
-      match /settings/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /runs/{runId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
     }
   }
 }

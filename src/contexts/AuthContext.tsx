@@ -27,11 +27,12 @@ interface AuthContextValue {
   loading: boolean;
   config: ConnectionConfig;
   configLoading: boolean;
+  lastSavedAt: Date | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  saveConfig: (config: ConnectionConfig) => Promise<void>;
-  refreshConfig: () => Promise<void>;
+  saveConfig: (config: ConnectionConfig) => Promise<Date>;
+  refreshConfig: () => Promise<ConnectionConfig>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -41,6 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<ConnectionConfig>(DEFAULT_CONFIG);
   const [configLoading, setConfigLoading] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  async function loadUserConfig(uid: string) {
+    setConfigLoading(true);
+    try {
+      const { config: c, updatedAt } = await loadConfigFromFirestore(uid);
+      setConfig(c);
+      setLastSavedAt(updatedAt);
+    } finally {
+      setConfigLoading(false);
+    }
+  }
 
   useEffect(() => {
     initAnalytics().catch(() => {});
@@ -49,15 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
       setLoading(false);
       if (u) {
-        setConfigLoading(true);
-        try {
-          const c = await loadConfigFromFirestore(u.uid);
-          setConfig(c);
-        } finally {
-          setConfigLoading(false);
-        }
+        await loadUserConfig(u.uid);
       } else {
         setConfig(DEFAULT_CONFIG);
+        setLastSavedAt(null);
       }
     });
   }, []);
@@ -76,19 +84,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function saveConfig(next: ConnectionConfig) {
     if (!user) throw new Error('Sign in to save settings.');
-    await saveConfigToFirestore(user.uid, next);
+    const savedAt = await saveConfigToFirestore(user.uid, next);
     setConfig(next);
+    setLastSavedAt(savedAt);
+    return savedAt;
   }
 
-  async function refreshConfig() {
-    if (!user) return;
-    setConfigLoading(true);
-    try {
-      const c = await loadConfigFromFirestore(user.uid);
-      setConfig(c);
-    } finally {
-      setConfigLoading(false);
-    }
+  async function refreshConfig(): Promise<ConnectionConfig> {
+    if (!user) return config;
+    const { config: c, updatedAt } = await loadConfigFromFirestore(user.uid);
+    setConfig(c);
+    setLastSavedAt(updatedAt);
+    return c;
   }
 
   return (
@@ -98,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         config,
         configLoading,
+        lastSavedAt,
         signIn,
         signUp,
         signOut,

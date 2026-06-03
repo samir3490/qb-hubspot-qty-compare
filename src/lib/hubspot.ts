@@ -1,4 +1,5 @@
 import type { ConnectionConfig } from './types';
+import { parseHubspotApiError } from './hubspot-scopes';
 
 export interface HubspotProductRow {
   sku: string;
@@ -52,7 +53,7 @@ export async function fetchHubspotProducts(
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`HubSpot API error (${res.status}): ${text}`);
+      throw new Error(parseHubspotApiError(res.status, text));
     }
 
     const data = (await res.json()) as {

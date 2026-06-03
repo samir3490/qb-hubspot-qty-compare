@@ -1,24 +1,51 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DEFAULT_CONFIG, maskToken } from '@/lib/storage';
 import type { ConnectionConfig } from '@/lib/types';
 import { EXCLUDED_PRODUCT_FAMILIES } from '@/lib/types';
+import {
+  HUBSPOT_REQUIRED_SCOPES,
+  HUBSPOT_OPTIONAL_SCOPES,
+} from '@/lib/hubspot-scopes';
 import { useAuth } from '@/contexts/AuthContext';
 
+function configsEqual(a: ConnectionConfig, b: ConnectionConfig): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export default function SettingsPage() {
-  const { config: savedConfig, configLoading, saveConfig: persistConfig } =
-    useAuth();
+  const {
+    user,
+    config: savedConfig,
+    configLoading,
+    lastSavedAt,
+    saveConfig: persistConfig,
+  } = useAuth();
   const [config, setConfig] = useState<ConnectionConfig>(DEFAULT_CONFIG);
   const [qbTest, setQbTest] = useState<string | null>(null);
   const [hsTest, setHsTest] = useState<string | null>(null);
   const [testing, setTesting] = useState<'qb' | 'hs' | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
+
+  const isDirty = useMemo(
+    () => !configsEqual(config, savedConfig),
+    [config, savedConfig]
+  );
 
   useEffect(() => {
     if (!configLoading) setConfig(savedConfig);
   }, [savedConfig, configLoading]);
+
+  useEffect(() => {
+    if (lastSavedAt) {
+      setSavedAtLabel(lastSavedAt.toLocaleString());
+    }
+  }, [lastSavedAt]);
 
   function updateQb<K extends keyof ConnectionConfig['quickbase']>(
     key: K,
@@ -28,7 +55,7 @@ export default function SettingsPage() {
       ...c,
       quickbase: { ...c.quickbase, [key]: value },
     }));
-    setSaved(false);
+    setSaveStatus('idle');
   }
 
   function updateHs<K extends keyof ConnectionConfig['hubspot']>(
@@ -39,17 +66,24 @@ export default function SettingsPage() {
       ...c,
       hubspot: { ...c.hubspot, [key]: value },
     }));
-    setSaved(false);
+    setSaveStatus('idle');
   }
 
   async function handleSave() {
+    if (!user) {
+      setSaveError('Sign in to save settings to the cloud.');
+      setSaveStatus('error');
+      return;
+    }
     setSaveError(null);
+    setSaveStatus('saving');
     try {
-      await persistConfig(config);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      const savedAt = await persistConfig(config);
+      setSavedAtLabel(savedAt.toLocaleString());
+      setSaveStatus('saved');
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Save failed');
+      setSaveStatus('error');
     }
   }
 
@@ -93,18 +127,48 @@ export default function SettingsPage() {
     <main className="container">
       <h1 style={{ marginTop: 0 }}>Connection settings</h1>
       <p style={{ color: 'var(--muted)', maxWidth: 640 }}>
-        API keys and field mappings are stored in Firebase Firestore under your
-        signed-in account. They are sent to this app&apos;s server only when you
-        run a compare or test.
+        Settings are saved to <strong>Firebase</strong> under your account (
+        {user?.email}). Sign in with the <strong>same email</strong> on phone,
+        laptop, or any device to load your API keys. Click{' '}
+        <strong>Save settings</strong> after changes — connection tests do not
+        save automatically.
       </p>
 
       {configLoading && (
         <div className="alert alert-info">Loading settings from Firebase…</div>
       )}
-      {saved && (
-        <div className="alert alert-success">Settings saved to Firebase.</div>
+
+      {saveStatus === 'saved' && (
+        <div className="alert alert-success toast-persist">
+          Settings saved to the cloud. Available on all devices when signed in
+          as {user?.email}.
+          {savedAtLabel && (
+            <>
+              {' '}
+              Last saved: {savedAtLabel}
+            </>
+          )}
+        </div>
       )}
+
+      {saveStatus === 'saving' && (
+        <div className="alert alert-info">Saving to Firebase…</div>
+      )}
+
+      {isDirty && saveStatus !== 'saved' && (
+        <div className="alert alert-info">
+          You have unsaved changes. Save before running a compare on another
+          page.
+        </div>
+      )}
+
       {saveError && <div className="alert alert-error">{saveError}</div>}
+
+      {savedAtLabel && saveStatus !== 'saved' && !isDirty && (
+        <div className="alert alert-info">
+          Last saved to cloud: {savedAtLabel}
+        </div>
+      )}
 
       <div className="card">
         <h2>QuickBase</h2>
@@ -296,6 +360,25 @@ export default function SettingsPage() {
             {hsTest}
           </div>
         )}
+
+        <div className="section-title">Required HubSpot Private App scopes</div>
+        <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+          HubSpot → Settings → Integrations → Private Apps → your app →{' '}
+          <strong>Scopes</strong>. After adding scopes,{' '}
+          <strong>regenerate the access token</strong> and paste it here.
+        </p>
+        <ul style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+          {HUBSPOT_REQUIRED_SCOPES.map((s) => (
+            <li key={s.scope}>
+              <code>{s.scope}</code> — {s.why}
+            </li>
+          ))}
+        </ul>
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+          Optional:{' '}
+          {HUBSPOT_OPTIONAL_SCOPES.map((s) => s.scope).join(', ')} if not
+          using standard Products object.
+        </p>
       </div>
 
       <div className="card">
@@ -310,10 +393,20 @@ export default function SettingsPage() {
         </ul>
       </div>
 
-      <div className="actions">
-        <button type="button" className="btn btn-primary" onClick={handleSave}>
-          Save settings
+      <div className="actions sticky-save">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={saveStatus === 'saving' || !isDirty}
+        >
+          {saveStatus === 'saving' ? 'Saving…' : 'Save settings to cloud'}
         </button>
+        {isDirty && (
+          <span style={{ color: 'var(--warning)', fontSize: '0.9rem' }}>
+            Unsaved changes
+          </span>
+        )}
       </div>
     </main>
   );

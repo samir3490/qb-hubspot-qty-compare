@@ -18,7 +18,7 @@ export default function HomePage() {
 }
 
 function ComparePage() {
-  const { user, config, configLoading } = useAuth();
+  const { user, config, configLoading, refreshConfig } = useAuth();
   const searchParams = useSearchParams();
   const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +44,16 @@ function ComparePage() {
   }, [searchParams, user]);
 
   async function runCompare() {
-    if (!config.quickbase.userToken || !config.hubspot.accessToken) {
-      setError('Configure API keys in Settings first.');
+    const activeConfig = user ? await refreshConfig() : config;
+
+    if (!activeConfig.quickbase.userToken || !activeConfig.hubspot.accessToken) {
+      setError(
+        'Configure and save API keys in Settings first (Save settings to cloud).'
+      );
       return;
     }
-    if (!config.quickbase.qtyFieldId) {
-      setError('Set QuickBase Quantity field ID in Settings.');
+    if (!activeConfig.quickbase.qtyFieldId) {
+      setError('Set QuickBase Quantity field ID in Settings and save.');
       return;
     }
 
@@ -61,7 +65,7 @@ function ComparePage() {
       const res = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config: activeConfig }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Compare failed');
