@@ -1,25 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  DEFAULT_CONFIG,
-  loadConfig,
-  saveConfig,
-  maskToken,
-} from '@/lib/storage';
+import { DEFAULT_CONFIG, maskToken } from '@/lib/storage';
 import type { ConnectionConfig } from '@/lib/types';
 import { EXCLUDED_PRODUCT_FAMILIES } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SettingsPage() {
+  const { config: savedConfig, configLoading, saveConfig: persistConfig } =
+    useAuth();
   const [config, setConfig] = useState<ConnectionConfig>(DEFAULT_CONFIG);
   const [qbTest, setQbTest] = useState<string | null>(null);
   const [hsTest, setHsTest] = useState<string | null>(null);
   const [testing, setTesting] = useState<'qb' | 'hs' | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    setConfig(loadConfig());
-  }, []);
+    if (!configLoading) setConfig(savedConfig);
+  }, [savedConfig, configLoading]);
 
   function updateQb<K extends keyof ConnectionConfig['quickbase']>(
     key: K,
@@ -43,10 +42,15 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  function handleSave() {
-    saveConfig(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  async function handleSave() {
+    setSaveError(null);
+    try {
+      await persistConfig(config);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Save failed');
+    }
   }
 
   async function testQuickbase() {
@@ -89,14 +93,18 @@ export default function SettingsPage() {
     <main className="container">
       <h1 style={{ marginTop: 0 }}>Connection settings</h1>
       <p style={{ color: 'var(--muted)', maxWidth: 640 }}>
-        API keys are stored in your browser (localStorage) and sent to this
-        app&apos;s server only when you run a compare or test. For scheduled
-        daily runs on Vercel, set environment variables instead (see README).
+        API keys and field mappings are stored in Firebase Firestore under your
+        signed-in account. They are sent to this app&apos;s server only when you
+        run a compare or test.
       </p>
 
-      {saved && (
-        <div className="alert alert-success">Settings saved locally.</div>
+      {configLoading && (
+        <div className="alert alert-info">Loading settings from Firebase…</div>
       )}
+      {saved && (
+        <div className="alert alert-success">Settings saved to Firebase.</div>
+      )}
+      {saveError && <div className="alert alert-error">{saveError}</div>}
 
       <div className="card">
         <h2>QuickBase</h2>

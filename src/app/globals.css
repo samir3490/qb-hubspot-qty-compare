@@ -52,6 +52,7 @@ nav {
   display: flex;
   gap: 1.5rem;
   align-items: center;
+  flex-wrap: wrap;
   padding: 1rem 1.5rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);

@@ -4,7 +4,8 @@ Compare product quantities between **QuickBase** (source of truth) and **HubSpot
 
 ## Features
 
-- Connect via **API keys** in the UI (stored in browser `localStorage`)
+- **Firebase Auth** — sign in / sign up with email & password
+- **Firebase Firestore** — API keys, field mappings, and compare run history stored per user
 - **Bulk fetch**: ~1–5 QuickBase + ~4 HubSpot API calls for ~300 SKUs
 - Match on **SKU**, flag mismatches, QB-only, HubSpot-only
 - Excludes Product Families: PumpLoc, Home&Foundry, Literature, Popfin, Cooler, Signage, Samples, Edge, DO NOT USE
@@ -19,12 +20,14 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000/settings](http://localhost:3000/settings):
-
-1. **QuickBase**: realm hostname, user token, table ID, field IDs (SKU, quantity summary field, product family).
-2. **HubSpot**: Private app token, object type `products`, properties `hs_sku`, `qty_available`.
-
-Then **Run compare** on the home page.
+1. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_FIREBASE_*` values.
+2. In [Firebase Console](https://console.firebase.google.com/) → **agrasen-technologies**:
+   - **Authentication** → Sign-in method → enable **Email/Password**
+   - **Firestore** → Create database (if needed)
+   - Deploy rules: `firebase deploy --only firestore:rules` (requires Firebase CLI)
+3. `npm run dev` → open [http://localhost:3000](http://localhost:3000) → **Sign up**
+4. **Settings**: QuickBase + HubSpot API keys (saved to Firestore)
+5. **Run compare** — results also saved under **History**
 
 ### Finding QuickBase field IDs
 
@@ -64,12 +67,21 @@ gh repo create qb-hubspot-qty-compare --public --source=. --push
 
 Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`.
 
+## Firestore data model
+
+```
+qtyCompareUsers/{uid}/settings/config   → ConnectionConfig (QB + HubSpot keys)
+qtyCompareUsers/{uid}/runs/{runId}      → CompareResult snapshot
+```
+
+Rules in `firestore.rules` restrict access to `request.auth.uid == userId`.
+
 ## Security
 
-- **Do not commit** `.env` or tokens.
-- UI tokens live in **localStorage** (your browser only); they are POSTed to your deployment’s API routes over HTTPS.
-- For production teams, prefer **Vercel env vars** only and restrict who can open Settings.
-- Use HubSpot Private App scopes: `crm.objects.products.read` (compare only).
+- **Do not commit** `.env.local` or API tokens.
+- QuickBase / HubSpot tokens are stored in **Firestore** (encrypted at rest by Google); protect with strong auth passwords.
+- Deploy `firestore.rules` before production use.
+- HubSpot Private App: `crm.objects.products.read` for compare-only.
 
 ## API routes
 

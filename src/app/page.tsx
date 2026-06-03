@@ -1,21 +1,49 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { loadConfig } from '@/lib/storage';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveCompareRunToFirestore, loadCompareRun } from '@/lib/firebase/firestore';
 import type { CompareResult, CompareRow, CompareStatus } from '@/lib/types';
 
 type Filter = 'all' | CompareStatus;
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="container loading">Loading…</div>}>
+      <ComparePage />
+    </Suspense>
+  );
+}
+
+function ComparePage() {
+  const { user, config, configLoading } = useAuth();
+  const searchParams = useSearchParams();
   const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [filter, setFilter] = useState<Filter>('mismatch');
 
+  useEffect(() => {
+    const runId = searchParams.get('run');
+    if (!runId || !user) return;
+    loadCompareRun(user.uid, runId)
+      .then((stored) => {
+        if (stored) {
+          setResult({
+            summary: stored.summary,
+            rows: stored.rows,
+            excluded: [],
+          });
+          setFilter('mismatch');
+        }
+      })
+      .catch(() => {});
+  }, [searchParams, user]);
+
   async function runCompare() {
-    const config = loadConfig();
     if (!config.quickbase.userToken || !config.hubspot.accessToken) {
       setError('Configure API keys in Settings first.');
       return;
@@ -37,8 +65,12 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Compare failed');
-      setResult(data as CompareResult);
+      const compareResult = data as CompareResult;
+      setResult(compareResult);
       setFilter('mismatch');
+      if (user) {
+        await saveCompareRunToFirestore(user.uid, compareResult);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Compare failed');
     } finally {
@@ -101,7 +133,7 @@ export default function HomePage() {
           type="button"
           className="btn btn-primary"
           onClick={runCompare}
-          disabled={loading}
+          disabled={loading || configLoading}
         >
           {loading ? 'Running compare…' : 'Run compare now'}
         </button>
@@ -117,6 +149,9 @@ export default function HomePage() {
         )}
         <Link href="/settings" className="btn btn-secondary">
           Settings
+        </Link>
+        <Link href="/history" className="btn btn-secondary">
+          History
         </Link>
       </div>
 
@@ -223,9 +258,9 @@ export default function HomePage() {
 
       {!result && !loading && !error && (
         <div className="alert alert-info">
-          Configure connections in <Link href="/settings">Settings</Link>,
-          then run a compare. Typical usage: ~1–5 QuickBase calls + ~4 HubSpot
-          calls for ~300 products.
+          Save connections in <Link href="/settings">Settings</Link> (stored in
+          Firebase), then run a compare. Typical usage: ~1–5 QuickBase calls + ~4
+          HubSpot calls for ~300 products.
         </div>
       )}
     </main>

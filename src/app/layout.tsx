@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Providers } from '@/components/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,14 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <nav>
-          <Link href="/" className="brand">
-            QB ↔ HubSpot Qty
-          </Link>
-          <Link href="/">Compare</Link>
-          <Link href="/settings">Settings</Link>
-        </nav>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

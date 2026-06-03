@@ -24,19 +24,14 @@ export const DEFAULT_CONFIG: ConnectionConfig = {
   },
 };
 
+/** @deprecated Use Firebase via useAuth(). Settings are stored in Firestore. */
 export function loadConfig(): ConnectionConfig {
-  if (typeof window === 'undefined') return DEFAULT_CONFIG;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_CONFIG;
-    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_CONFIG;
-  }
+  return DEFAULT_CONFIG;
 }
 
-export function saveConfig(config: ConnectionConfig): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+/** @deprecated Use useAuth().saveConfig() */
+export function saveConfig(_config: ConnectionConfig): void {
+  // no-op: persisted in Firestore when signed in
 }
 
 export function maskToken(token: string): string {
