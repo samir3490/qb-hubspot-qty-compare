@@ -23,10 +23,45 @@ function fieldValue(record: Record<string, { value?: unknown }>, fid: number): u
   return record[String(fid)]?.value;
 }
 
+function normalizeRealmHostname(raw: string): string {
+  const host = raw
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/\/$/, '');
+  if (!host) {
+    throw new Error(
+      'QuickBase realm hostname is required (e.g. yourcompany.quickbase.com).'
+    );
+  }
+  if (host === 'api.quickbase.com' || host.includes('quickbase.com/db')) {
+    throw new Error(
+      'Use your realm hostname (e.g. isee.quickbase.com), not api.quickbase.com or an app URL.'
+    );
+  }
+  return host;
+}
+
+export function quickbaseHeaders(
+  config: ConnectionConfig['quickbase']
+): Record<string, string> {
+  const token = config.userToken.trim();
+  if (!token) {
+    throw new Error('QuickBase user token is required.');
+  }
+  return {
+    'QB-USER-TOKEN': token,
+    'QB-Realm-Hostname': normalizeRealmHostname(config.realmHostname),
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'User-Agent': 'qb-hubspot-qty-compare/1.0',
+  };
+}
+
 export async function fetchQuickbaseItems(
   config: ConnectionConfig['quickbase']
 ): Promise<{ items: QuickbaseItemRow[]; apiCalls: number }> {
-  const hostname = config.realmHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  normalizeRealmHostname(config.realmHostname);
   const select = [
     config.skuFieldId,
     config.qtyFieldId,
@@ -50,11 +85,7 @@ export async function fetchQuickbaseItems(
 
     const res = await fetch(`https://api.quickbase.com/v1/records/query`, {
       method: 'POST',
-      headers: {
-        'QB-USER-TOKEN': config.userToken,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: quickbaseHeaders(config),
       body: JSON.stringify(body),
     });
 
@@ -62,7 +93,12 @@ export async function fetchQuickbaseItems(
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`QuickBase API error (${res.status}): ${text}`);
+      let hint = '';
+      if (res.status === 403) {
+        hint =
+          ' Check: (1) QB-Realm-Hostname matches your realm (e.g. isee.quickbase.com), (2) user token is valid and not expired, (3) token has access to the Items table/app.';
+      }
+      throw new Error(`QuickBase API error (${res.status}): ${text}${hint}`);
     }
 
     const data = (await res.json()) as {

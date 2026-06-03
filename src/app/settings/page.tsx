@@ -114,8 +114,11 @@ export default function SettingsPage() {
             <input
               value={config.quickbase.realmHostname}
               onChange={(e) => updateQb('realmHostname', e.target.value)}
-              placeholder="yourcompany.quickbase.com"
+              placeholder="isee.quickbase.com"
             />
+            <p className="hint">
+              Required API header. Use only the realm host (not api.quickbase.com).
+            </p>
           </div>
           <div>
             <label>User token</label>
