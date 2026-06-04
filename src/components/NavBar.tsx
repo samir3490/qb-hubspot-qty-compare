@@ -16,7 +16,7 @@ export function NavBar() {
         <Link href="/" className="nav-logo-link" aria-label="iSee Store Innovations home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logos/isee-logo.svg"
+            src="/logos/isee-logo.png"
             alt="iSee Store Innovations"
             className="nav-logo-isee"
           />

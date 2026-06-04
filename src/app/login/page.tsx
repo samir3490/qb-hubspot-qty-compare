@@ -33,7 +33,7 @@ export default function LoginPage() {
       <div className="login-card-wrap">
         <div className="login-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logos/isee-logo.svg" alt="iSee Store Innovations" />
+          <img src="/logos/isee-logo.png" alt="iSee Store Innovations" />
           <h1>Quantity Compare</h1>
           <p>
             QuickBase ↔ HubSpot reconciliation for iSee Store Innovations
