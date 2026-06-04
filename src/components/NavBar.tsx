@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { IseeLogo } from '@/components/IseeLogo';
 
 export function NavBar() {
   const pathname = usePathname();
@@ -14,12 +15,7 @@ export function NavBar() {
     <nav className="app-nav">
       <div className="nav-brand-group">
         <Link href="/" className="nav-logo-link" aria-label="iSee Store Innovations home">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logos/isee-logo.png"
-            alt="iSee Store Innovations"
-            className="nav-logo-isee"
-          />
+          <IseeLogo className="nav-logo-isee" />
         </Link>
         <span className="nav-divider" aria-hidden />
         <span className="nav-app-title">Qty Compare</span>
@@ -59,7 +55,7 @@ export function NavBar() {
         </span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logos/agrasen-logo.svg"
+          src="/logos/agrasen-logo.png"
           alt="Agrasen Technologies"
           className="nav-logo-agrasen"
         />

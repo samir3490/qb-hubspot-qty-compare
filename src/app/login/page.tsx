@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { IseeLogo } from '@/components/IseeLogo';
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
@@ -32,8 +33,7 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-card-wrap">
         <div className="login-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logos/isee-logo.png" alt="iSee Store Innovations" />
+          <IseeLogo className="login-logo-isee" />
           <h1>Quantity Compare</h1>
           <p>
             QuickBase ↔ HubSpot reconciliation for iSee Store Innovations
@@ -109,7 +109,7 @@ export default function LoginPage() {
         <div className="login-powered">
           <span>Built by</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logos/agrasen-logo.svg" alt="Agrasen Technologies" />
+          <img src="/logos/agrasen-logo.png" alt="Agrasen Technologies" />
         </div>
       </div>
     </main>

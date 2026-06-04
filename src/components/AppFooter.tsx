@@ -16,7 +16,7 @@ export function AppFooter() {
         <span className="nav-powered-label">Powered by</span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logos/agrasen-logo.svg"
+          src="/logos/agrasen-logo.png"
           alt="Agrasen Technologies IT Consulting Services"
         />
       </div>
