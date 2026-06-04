@@ -3,23 +3,30 @@ import { runCompare } from '@/lib/compare';
 import { getCronConfig } from '@/lib/cron-config';
 import { sendMismatchAlert } from '@/lib/email/alert';
 import { syncHubspotQuantitiesFromQuickbase } from '@/lib/hubspot-sync';
+import { isCronAuthorized, isVercelCronRequest } from '@/lib/cron-auth';
+import { getCronDiagnostics } from '@/lib/cron-diagnostics';
 import {
   saveCompareRunAdmin,
   isAdminConfigured,
 } from '@/lib/firebase/admin';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Daily compare (Vercel Cron). Emails ALERT_EMAIL only when quantity mismatches exist.
+ * Runs without user login — uses Firestore settings (CRON_FIREBASE_UID) or QB_/HUBSPOT_ env vars.
  * Auth: Authorization: Bearer CRON_SECRET (set automatically by Vercel Cron).
  */
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get('authorization');
-  const secret = process.env.CRON_SECRET;
+  const isStatus = request.nextUrl.searchParams.get('status') === '1';
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (isStatus) {
+    const diagnostics = await getCronDiagnostics();
+    return NextResponse.json({ ok: true, ...diagnostics });
   }
 
   const config = await getCronConfig();
@@ -28,18 +35,24 @@ export async function GET(request: NextRequest) {
     !config.quickbase.qtyFieldId ||
     !config.hubspot.accessToken
   ) {
+    const diagnostics = await getCronDiagnostics();
+    console.error('Cron: config missing', diagnostics);
     return NextResponse.json(
       {
         error:
-          'Cron config missing. Save settings in the app and set CRON_FIREBASE_UID + FIREBASE_SERVICE_ACCOUNT_KEY on Vercel, or set QB_* / HUBSPOT_* env vars.',
+          'Cron config missing. Set CRON_FIREBASE_UID + FIREBASE_SERVICE_ACCOUNT_KEY on Vercel (and save settings in the app), or set QB_* / HUBSPOT_* env vars.',
+        diagnostics,
       },
       { status: 500 }
     );
   }
 
+  const triggeredBy = isVercelCronRequest(request) ? 'vercel-cron' : 'manual';
+
   try {
+    console.log(`Cron compare starting (${triggeredBy})`);
     const result = await runCompare(config);
-    const uid = process.env.CRON_FIREBASE_UID;
+    const uid = process.env.CRON_FIREBASE_UID?.trim();
 
     if (uid && isAdminConfigured()) {
       try {
@@ -49,7 +62,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let emailResult = { sent: false, mismatchCount: 0 };
+    let emailSent = false;
+    let emailError: string | null = null;
     let syncResult: Awaited<
       ReturnType<typeof syncHubspotQuantitiesFromQuickbase>
     > | null = null;
@@ -62,23 +76,40 @@ export async function GET(request: NextRequest) {
       const mismatches = result.rows.filter((r) => r.status === 'mismatch');
 
       if (autoSync) {
-        syncResult = await syncHubspotQuantitiesFromQuickbase(
-          config.hubspot,
-          mismatches
-            .filter((r) => r.qbQty !== null && Number.isFinite(r.qbQty))
-            .map((r) => ({ sku: r.sku, qbQty: r.qbQty as number }))
-        );
+        try {
+          syncResult = await syncHubspotQuantitiesFromQuickbase(
+            config.hubspot,
+            mismatches
+              .filter((r) => r.qbQty !== null && Number.isFinite(r.qbQty))
+              .map((r) => ({ sku: r.sku, qbQty: r.qbQty as number }))
+          );
+        } catch (e) {
+          console.error('Cron: HubSpot auto-sync failed', e);
+        }
       }
 
-      emailResult = await sendMismatchAlert(result);
+      try {
+        const emailResult = await sendMismatchAlert(result);
+        emailSent = emailResult.sent;
+      } catch (e) {
+        emailError =
+          e instanceof Error ? e.message : 'Failed to send mismatch email';
+        console.error('Cron: email failed', emailError);
+      }
     }
+
+    console.log(
+      `Cron compare done: mismatches=${result.summary.mismatches} emailSent=${emailSent}${emailError ? ` emailError=${emailError}` : ''}`
+    );
 
     return NextResponse.json({
       ok: true,
+      triggeredBy,
       summary: result.summary,
       mismatchCount: result.summary.mismatches,
-      emailSent: emailResult.sent,
-      alertEmail: emailResult.sent ? process.env.ALERT_EMAIL : undefined,
+      emailSent,
+      emailError,
+      alertEmail: emailSent ? process.env.ALERT_EMAIL : undefined,
       hubspotSync: syncResult,
       autoSyncEnabled: autoSync,
     });

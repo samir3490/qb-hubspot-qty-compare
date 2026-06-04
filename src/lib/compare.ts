@@ -156,6 +156,9 @@ export function getConfigFromEnv(): ConnectionConfig | null {
         process.env.HS_PROP_PRODUCT_FAMILY ?? 'product_family',
       nameProperty: process.env.HS_PROP_NAME ?? 'name',
     },
+    preferences: {
+      autoSyncHubSpotOnDaily: process.env.CRON_AUTO_SYNC_HUBSPOT === 'true',
+    },
   };
 }
 

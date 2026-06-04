@@ -48,12 +48,23 @@ Service account bypasses client rules. No change needed if admin key is from sam
 
 ## 5. Test manually
 
+**Check cron is configured (no compare run):**
+
+```bash
+curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
+  "https://qb-hubspot-qty-compare.vercel.app/api/cron/compare?status=1"
+```
+
+Expect `"ready": true` with `configLoaded`, `emailConfigured`, and `cronFirebaseUidSet` all true.
+
+**Run compare + email now:**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
   https://qb-hubspot-qty-compare.vercel.app/api/cron/compare
 ```
 
-Response when mismatches exist: `"emailSent": true`
+Response when mismatches exist: `"emailSent": true` (or `"emailError"` if SMTP misconfigured)
 
 ## 6. Vercel Cron plan
 

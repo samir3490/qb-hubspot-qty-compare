@@ -13,7 +13,7 @@ export async function getCronConfig(): Promise<ConnectionConfig | null> {
 
   if (envComplete) return fromEnv;
 
-  const uid = process.env.CRON_FIREBASE_UID;
+  const uid = process.env.CRON_FIREBASE_UID?.trim();
   if (uid && isAdminConfigured()) {
     const fromFirestore = await loadConfigFromAdmin(uid);
     if (
