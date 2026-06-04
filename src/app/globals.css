@@ -126,14 +126,17 @@ a:hover {
   height: 40px;
   width: auto;
   max-width: 180px;
+  object-fit: contain;
   display: block;
   flex-shrink: 0;
 }
 
 .login-logo-isee {
-  height: 56px;
+  height: auto;
   width: auto;
-  max-width: 240px;
+  max-width: 260px;
+  max-height: 72px;
+  object-fit: contain;
   display: inline-block;
   margin-bottom: 0.75rem;
 }
