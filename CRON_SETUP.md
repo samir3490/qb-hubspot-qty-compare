@@ -15,6 +15,8 @@ Optional: enable **Auto-update HubSpot quantities on daily compare** in Settings
 | `CRON_FIREBASE_UID` | Your Firebase Auth user id (see below) |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Full service account JSON (one line) |
 
+**Important:** After changing env vars on Vercel, **redeploy** production so the new values take effect.
+
 **Email (pick one):**
 
 | Option A — Resend | Option B — Gmail SMTP |
