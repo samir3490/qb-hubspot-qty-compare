@@ -137,14 +137,16 @@ export default function SettingsPage() {
 
   return (
     <main className="container">
-      <h1 style={{ marginTop: 0 }}>Connection settings</h1>
-      <p style={{ color: 'var(--muted)', maxWidth: 640 }}>
-        Settings are saved to <strong>Firebase</strong> under your account (
-        {user?.email}). Sign in with the <strong>same email</strong> on phone,
-        laptop, or any device to load your API keys. Click{' '}
-        <strong>Save settings</strong> after changes — connection tests do not
-        save automatically.
-      </p>
+      <header className="page-header">
+        <h1>Connection settings</h1>
+        <p>
+          Settings are saved to <strong>Firebase</strong> under your account (
+          {user?.email}). Sign in with the <strong>same email</strong> on phone,
+          laptop, or any device to load your API keys. Click{' '}
+          <strong>Save settings</strong> after changes — connection tests do not
+          save automatically.
+        </p>
+      </header>
 
       {configLoading && (
         <div className="alert alert-info">Loading settings from Firebase…</div>

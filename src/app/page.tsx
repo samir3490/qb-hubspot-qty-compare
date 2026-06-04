@@ -193,12 +193,14 @@ function ComparePage() {
 
   return (
     <main className="container">
-      <h1 style={{ marginTop: 0 }}>Quantity compare</h1>
-      <p style={{ color: 'var(--muted)', maxWidth: 720 }}>
-        Pull all comparable items from QuickBase and HubSpot in a few API
-        calls, then diff by SKU. QuickBase is the source of truth for quantity
-        values shown here.
-      </p>
+      <header className="page-header">
+        <h1>Quantity compare</h1>
+        <p>
+          Pull all comparable items from QuickBase and HubSpot in a few API
+          calls, then diff by SKU. QuickBase is the source of truth for quantity
+          values shown here.
+        </p>
+      </header>
 
       <div className="actions">
         <button

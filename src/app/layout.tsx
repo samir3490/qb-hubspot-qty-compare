@@ -3,9 +3,9 @@ import { Providers } from '@/components/Providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'QB ↔ HubSpot Quantity Compare',
+  title: 'iSee · QuickBase ↔ HubSpot Quantity Compare',
   description:
-    'Compare QuickBase and HubSpot product quantities with minimal API usage',
+    'Compare QuickBase and HubSpot product quantities for iSee Store Innovations',
 };
 
 export default function RootLayout({

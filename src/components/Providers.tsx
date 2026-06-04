@@ -3,6 +3,7 @@
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AuthGuard } from '@/components/AuthGuard';
 import { NavBar } from '@/components/NavBar';
+import { AppFooter } from '@/components/AppFooter';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthGuard>
         <NavBar />
         {children}
+        <AppFooter />
       </AuthGuard>
     </AuthProvider>
   );

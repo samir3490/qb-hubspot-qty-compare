@@ -26,10 +26,10 @@ export default function HistoryPage() {
 
   return (
     <main className="container">
-      <h1 style={{ marginTop: 0 }}>Compare history</h1>
-      <p style={{ color: 'var(--muted)' }}>
-        Past runs saved to Firebase when you run a compare.
-      </p>
+      <header className="page-header">
+        <h1>Compare history</h1>
+        <p>Past compare runs saved to your Firebase account.</p>
+      </header>
 
       {loading && <div className="loading">Loading history…</div>}
       {error && <div className="alert alert-error">{error}</div>}

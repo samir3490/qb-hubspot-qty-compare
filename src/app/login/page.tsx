@@ -29,76 +29,88 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="container" style={{ maxWidth: 420 }}>
-      <h1 style={{ marginTop: 0 }}>Sign in</h1>
-      <p style={{ color: 'var(--muted)' }}>
-        API keys and compare history are stored in Firebase Firestore under
-        your account.
-      </p>
+    <main className="login-page">
+      <div className="login-card-wrap">
+        <div className="login-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logos/isee-logo.svg" alt="iSee Store Innovations" />
+          <h1>Quantity Compare</h1>
+          <p>
+            QuickBase ↔ HubSpot reconciliation for iSee Store Innovations
+          </p>
+        </div>
 
-      <div className="card">
-        <form onSubmit={handleSubmit}>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            autoComplete={
-              mode === 'signin' ? 'current-password' : 'new-password'
-            }
-          />
-          {error && <div className="alert alert-error">{error}</div>}
-          <div className="actions">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={busy}
-            >
-              {busy
-                ? 'Please wait…'
-                : mode === 'signin'
-                  ? 'Sign in'
-                  : 'Create account'}
-            </button>
-          </div>
-        </form>
-        <p style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-          {mode === 'signin' ? (
-            <>
-              No account?{' '}
+        <div className="card">
+          <form onSubmit={handleSubmit}>
+            <label>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              autoComplete={
+                mode === 'signin' ? 'current-password' : 'new-password'
+              }
+            />
+            {error && <div className="alert alert-error">{error}</div>}
+            <div className="actions">
               <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '0.2rem 0.5rem', marginLeft: 4 }}
-                onClick={() => setMode('signup')}
+                type="submit"
+                className="btn btn-primary"
+                disabled={busy}
+                style={{ width: '100%' }}
               >
-                Sign up
+                {busy
+                  ? 'Please wait…'
+                  : mode === 'signin'
+                    ? 'Sign in'
+                    : 'Create account'}
               </button>
-            </>
-          ) : (
-            <>
-              Have an account?{' '}
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ padding: '0.2rem 0.5rem', marginLeft: 4 }}
-                onClick={() => setMode('signin')}
-              >
-                Sign in
-              </button>
-            </>
-          )}
-        </p>
+            </div>
+          </form>
+          <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: 0 }}>
+            {mode === 'signin' ? (
+              <>
+                No account?{' '}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.2rem 0.5rem', marginLeft: 4 }}
+                  onClick={() => setMode('signup')}
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Have an account?{' '}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.2rem 0.5rem', marginLeft: 4 }}
+                  onClick={() => setMode('signin')}
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="login-powered">
+          <span>Built by</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logos/agrasen-logo.svg" alt="Agrasen Technologies" />
+        </div>
       </div>
     </main>
   );

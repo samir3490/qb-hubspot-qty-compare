@@ -11,41 +11,59 @@ export function NavBar() {
   if (pathname === '/login') return null;
 
   return (
-    <nav>
-      <Link href="/" className="brand">
-        QB ↔ HubSpot Qty
-      </Link>
-      <Link href="/" className={pathname === '/' ? 'active' : ''}>
-        Compare
-      </Link>
-      <Link
-        href="/history"
-        className={pathname === '/history' ? 'active' : ''}
-      >
-        History
-      </Link>
-      <Link
-        href="/settings"
-        className={pathname === '/settings' ? 'active' : ''}
-      >
-        Settings
-      </Link>
-      <span style={{ flex: 1 }} />
-      {user && (
-        <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-          {user.email}
-        </span>
-      )}
+    <nav className="app-nav">
+      <div className="nav-brand-group">
+        <Link href="/" className="nav-logo-link" aria-label="iSee Store Innovations home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logos/isee-logo.svg"
+            alt="iSee Store Innovations"
+            className="nav-logo-isee"
+          />
+        </Link>
+        <span className="nav-divider" aria-hidden />
+        <span className="nav-app-title">Qty Compare</span>
+      </div>
+
+      <div className="nav-links">
+        <Link href="/" className={pathname === '/' ? 'active' : ''}>
+          Compare
+        </Link>
+        <Link href="/history" className={pathname === '/history' ? 'active' : ''}>
+          History
+        </Link>
+        <Link href="/settings" className={pathname === '/settings' ? 'active' : ''}>
+          Settings
+        </Link>
+      </div>
+
+      <span className="nav-spacer" />
+
+      {user && <span className="nav-user">{user.email}</span>}
       {user && (
         <button
           type="button"
           className="btn btn-secondary"
-          style={{ padding: '0.35rem 0.75rem', marginLeft: '0.75rem' }}
+          style={{ padding: '0.35rem 0.75rem' }}
           onClick={() => signOut()}
         >
           Sign out
         </button>
       )}
+
+      <div className="nav-powered">
+        <span className="nav-powered-label">
+          Built by
+          <br />
+          Agrasen
+        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logos/agrasen-logo.svg"
+          alt="Agrasen Technologies"
+          className="nav-logo-agrasen"
+        />
+      </div>
     </nav>
   );
 }
