@@ -23,6 +23,17 @@ function fieldValue(record: Record<string, { value?: unknown }>, fid: number): u
   return record[String(fid)]?.value;
 }
 
+/** QuickBase checkbox / yes-no Active field — true, yes, 1, etc. */
+export function isQuickbaseItemActive(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value === null || value === undefined) {
+    return false;
+  }
+  const s = String(value).trim().toLowerCase();
+  if (!s) return false;
+  return s === 'true' || s === 'yes' || s === '1' || s === 'y';
+}
+
 function normalizeRealmHostname(raw: string): string {
   const host = raw
     .trim()
@@ -86,12 +97,26 @@ export async function fetchQuickbaseItems(
   const pageSize = 1000;
   let apiCalls = 0;
 
+  const activeFieldId =
+    typeof config.activeFieldId === 'number' && config.activeFieldId > 0
+      ? config.activeFieldId
+      : undefined;
+
   while (true) {
-    const body = {
+    const body: {
+      from: string;
+      select: number[];
+      where?: string;
+      options: { skip: number; top: number };
+    } = {
       from: config.tableId,
       select,
       options: { skip, top: pageSize },
     };
+
+    if (activeFieldId) {
+      body.where = `{${activeFieldId}.EX.true}`;
+    }
 
     const res = await fetch(`https://api.quickbase.com/v1/records/query`, {
       method: 'POST',
@@ -136,6 +161,13 @@ export async function fetchQuickbaseItems(
 
       if (!sku) continue;
 
+      const activeValue = activeFieldId
+        ? fieldValue(rec, activeFieldId)
+        : undefined;
+      if (activeFieldId && !isQuickbaseItemActive(activeValue)) {
+        continue;
+      }
+
       items.push({
         sku: sku.toUpperCase(),
         qty: parseQty(fieldValue(rec, config.qtyFieldId)),
@@ -146,8 +178,8 @@ export async function fetchQuickbaseItems(
         recordId: config.recordIdFieldId
           ? String(fieldValue(rec, config.recordIdFieldId) ?? '').trim()
           : '',
-        active: config.activeFieldId
-          ? String(fieldValue(rec, config.activeFieldId) ?? '').trim()
+        active: activeFieldId
+          ? String(activeValue ?? '').trim()
           : '',
       });
     }

@@ -292,6 +292,25 @@ export default function SettingsPage() {
             />
           </div>
         </div>
+        <div className="form-row">
+          <div>
+            <label>Active field ID</label>
+            <input
+              type="number"
+              value={config.quickbase.activeFieldId || ''}
+              onChange={(e) =>
+                updateQb(
+                  'activeFieldId',
+                  parseInt(e.target.value, 10) || undefined
+                )
+              }
+            />
+            <p className="hint">
+              Only items where Active is Yes are compared or synced. Verify FID
+              in Items table field settings (typically 6).
+            </p>
+          </div>
+        </div>
         <div className="actions">
           <button
             type="button"

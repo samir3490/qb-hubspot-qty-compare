@@ -12,7 +12,7 @@ export const DEFAULT_CONFIG: ConnectionConfig = {
     productFamilyFieldId: 8,
     itemNameFieldId: 0,
     recordIdFieldId: 3,
-    activeFieldId: 0,
+    activeFieldId: 6,
   },
   hubspot: {
     accessToken: '',
