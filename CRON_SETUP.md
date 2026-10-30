@@ -1,6 +1,8 @@
 # Daily cron + email alerts
 
-Automated job: **every day at 6:00 AM US Central** (`0 12 * * *` UTC).  
+**Retired.** This daily job is **off**. `vercel.json` has no crons. Compare, HubSpot sync, and mismatch emails are disabled.
+
+Previously: **every day at 6:00 AM US Central** (`0 12 * * *` UTC).  
 During daylight saving (CDT), that is **7:00 AM** local Central time.  
 Emails **samir3490@gmail.com** when **quantity mismatches** exist **only if** `COMPARE_ALERT_EMAILS=true`. Emails are currently **off**.
 

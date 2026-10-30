@@ -196,27 +196,31 @@ function ComparePage() {
       <header className="page-header">
         <h1>Quantity compare</h1>
         <p>
-          Pull all comparable items from QuickBase and HubSpot in a few API
-          calls, then diff by SKU. QuickBase is the source of truth for quantity
-          values shown here.
+          This application is retired. Daily compare, HubSpot quantity sync, and
+          mismatch emails are off.
         </p>
       </header>
+
+      <div className="alert alert-info">
+        The 6:00 AM US Central cron job has been removed. Nothing in this app
+        will run a compare or send email.
+      </div>
 
       <div className="actions">
         <button
           type="button"
           className="btn btn-primary"
           onClick={runCompare}
-          disabled={loading || configLoading}
+          disabled
         >
-          {loading ? 'Running compare…' : 'Run compare now'}
+          Compare disabled
         </button>
         {result && result.summary.mismatches > 0 && (
           <button
             type="button"
             className="btn btn-secondary"
             onClick={syncHubspotFromQuickbase}
-            disabled={syncing || loading}
+            disabled
           >
             {syncing ? 'Updating HubSpot…' : 'Update HubSpot from QuickBase'}
           </button>
@@ -354,14 +358,6 @@ function ComparePage() {
             </div>
           </div>
         </>
-      )}
-
-      {!result && !loading && !error && (
-        <div className="alert alert-info">
-          Save connections in <Link href="/settings">Settings</Link> (stored in
-          Firebase), then run a compare. Results stay in the app — mismatch
-          emails are currently off.
-        </div>
       )}
     </main>
   );
