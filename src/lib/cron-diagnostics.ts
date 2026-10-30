@@ -1,4 +1,4 @@
-import { getAlertEmail } from './email/alert';
+import { getAlertEmail, isCompareAlertEmailEnabled } from './email/alert';
 import { isAdminConfigured } from './firebase/admin';
 import { getCronConfig } from './cron-config';
 import { getCronSecret } from './cron-auth';
@@ -25,17 +25,14 @@ export async function getCronDiagnostics() {
   }
 
   return {
-    ready:
-      !!getCronSecret() &&
-      configLoaded &&
-      (!!process.env.RESEND_API_KEY ||
-        (!!process.env.SMTP_USER?.trim() && !!process.env.SMTP_PASS?.trim())),
+    ready: !!getCronSecret() && configLoaded,
     cronSecretSet: !!getCronSecret(),
     cronFirebaseUidSet: !!uid,
     firebaseAdminConfigured: isAdminConfigured(),
     emailConfigured:
       !!process.env.RESEND_API_KEY ||
       (!!process.env.SMTP_USER?.trim() && !!process.env.SMTP_PASS?.trim()),
+    compareAlertEmailsEnabled: isCompareAlertEmailEnabled(),
     alertEmail: getAlertEmail(),
     configLoaded,
     configSource,

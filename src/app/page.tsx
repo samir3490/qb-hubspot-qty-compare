@@ -359,8 +359,8 @@ function ComparePage() {
       {!result && !loading && !error && (
         <div className="alert alert-info">
           Save connections in <Link href="/settings">Settings</Link> (stored in
-          Firebase), then run a compare. If mismatches are found, an alert email
-          is sent automatically.
+          Firebase), then run a compare. Results stay in the app — mismatch
+          emails are currently off.
         </div>
       )}
     </main>

@@ -2,7 +2,7 @@
 
 Automated job: **every day at 6:00 AM US Central** (`0 12 * * *` UTC).  
 During daylight saving (CDT), that is **7:00 AM** local Central time.  
-Emails **samir3490@gmail.com** when **quantity mismatches** exist.
+Emails **samir3490@gmail.com** when **quantity mismatches** exist **only if** `COMPARE_ALERT_EMAILS=true`. Emails are currently **off**.
 
 Optional: enable **Auto-update HubSpot quantities on daily compare** in Settings (or set `CRON_AUTO_SYNC_HUBSPOT=true` on Vercel) to push QuickBase qty to HubSpot after mismatches are found. Requires HubSpot scope `crm.objects.products.write`.
 
@@ -12,6 +12,7 @@ Optional: enable **Auto-update HubSpot quantities on daily compare** in Settings
 |----------|---------|
 | `CRON_SECRET` | Random string; Vercel Cron sends `Authorization: Bearer …` |
 | `ALERT_EMAIL` | Default: `samir3490@gmail.com` |
+| `COMPARE_ALERT_EMAILS` | Set `true` to send mismatch emails. Omit or `false` to keep emails off. |
 | `CRON_FIREBASE_UID` | Your Firebase Auth user id (see below) |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Full service account JSON (one line) |
 
@@ -76,7 +77,7 @@ Cron jobs require **Vercel Pro** (or equivalent) on the project. Confirm under *
 
 - Loads API keys from **your saved Firestore settings** (same as the app UI)
 - Compares QuickBase vs HubSpot in bulk
-- **No email** if all quantities match
-- Email includes top 50 mismatches + link to the app
+- **No email** unless `COMPARE_ALERT_EMAILS=true` (currently off)
+- When emails are on: none if all quantities match; otherwise top 50 mismatches + link to the app
 - Saves run to Firestore under your user (History tab)
 - If auto-sync is enabled, updates HubSpot `qty_available` (or your configured qty property) from QuickBase for mismatch rows

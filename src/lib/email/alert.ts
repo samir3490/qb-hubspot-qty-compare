@@ -7,6 +7,11 @@ export function getAlertEmail(): string {
   return process.env.ALERT_EMAIL ?? 'samir3490@gmail.com';
 }
 
+/** Mismatch emails are off unless COMPARE_ALERT_EMAILS=true on Vercel. */
+export function isCompareAlertEmailEnabled(): boolean {
+  return process.env.COMPARE_ALERT_EMAILS === 'true';
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -128,8 +133,8 @@ export async function sendMismatchAlert(
   result: CompareResult
 ): Promise<{ sent: boolean; mismatchCount: number }> {
   const mismatches = result.rows.filter((r) => r.status === 'mismatch');
-  if (mismatches.length === 0) {
-    return { sent: false, mismatchCount: 0 };
+  if (mismatches.length === 0 || !isCompareAlertEmailEnabled()) {
+    return { sent: false, mismatchCount: mismatches.length };
   }
 
   const to = getAlertEmail();
